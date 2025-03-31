@@ -171,7 +171,7 @@
         function generateBill() {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
-            doc.text("Milk Bill", 10, 10);
+            doc.text("lion milk bill", 10, 10);
             doc.text(document.getElementById("totalMilk").innerText, 10, 20);
             doc.text(document.getElementById("totalBill").innerText, 10, 30);
             doc.save("Milk_Bill.pdf");
