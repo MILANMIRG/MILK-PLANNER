@@ -1,3 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Milk Planner</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+
+        .header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .menu-bar {
+            position: relative;
+            display: inline-block;
+        }
+
+        .menu-btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            font-size: 20px;
+        }
+
+        .menu-content {
+            display: none;
+            position: absolute;
+            background-color: white;
+            min-width: 160px;
+            box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2);
+            z-index: 1;
+        }
+
+        .menu-content a {
+            color: black;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+        }
+
+        .menu-content a:hover {
+            background-color: #ddd;
+        }
+
+        .menu-btn:hover + .menu-content {
+            display: block;
+        }
+
+        .form-container {
+            margin: 20px;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 5px;
+        }
+
+        input, button {
+            margin: 10px 0;
+            padding: 10px;
+            width: 100%;
+        }
+
+        .calendar {
+            margin: 20px;
+        }
+
+        #calendarHeader {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.2em;
+            margin-bottom: 20px;
+        }
+
+        #calendarGrid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            text-align: center;
+        }
+
+        .calendar-day {
+            padding: 10px;
+            background-color: #f4f4f4;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        .calendar-day:hover {
+            background-color: #ddd;
+        }
+
+        .current-day {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .selected-day {
+            background-color: orange;
+            color: white;
+        }
+
+        .welcome-section {
+            margin: 20px;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 5px;
+        }
+
+        #autoAddMilkBtn {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        button {
+            cursor: pointer;
+        }
+
+        #updateBtn {
+            background-color: green;
+            color: white;
+        }
+
+        #resetBtn {
+            background-color: red;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>MILK PLANNER</h1>
+        <div class="menu-bar">
+            <button class="menu-btn">☰</button>
+            <div class="menu-content">
+                <ul>
+                    <li><a href="#">Home</a></li>
+                    <li><a href="#">Profile</a></li>
+                    <li><a href="#">Milk Details</a></li>
+                    <li><a href="#">Generate Bill</a></li>
+                    <li><a href="#">Logout</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="toggle-btn">
+            <button id="autoAddMilkBtn">RESUME</button>
+        </div>
+    </div>
+
+    <div class="form-container">
+        <h1>Milk Planner - Sign Up</h1>
+        <form id="signupForm">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" required>
+
+            <label for="name">Name</label>
+            <input type="text" id="name" name="name" required>
+
+            <label for="address">Address</label>
+            <input type="text" id="address" name="address" required>
+
+            <label for="milkPrice">Milk Price (Rs. per kg)</label>
+            <input type="number" id="milkPrice" name="milkPrice" required>
+
+            <label for="minMilkReq">Min Milk Daily (kg)</label>
+            <input type="number" id="minMilkReq" name="minMilkReq" required>
+
+            <button type="submit">Submit</button>
+        </form>
+    </div>
+
+    <div class="welcome-section">
+        <h2>Welcome, <span id="userName">[User's Name]</span>!</h2>
+        <p>Milk Price: <span id="milkPriceDisplay"></span> Rs. per kg</p>
+        <p>Daily Milk Requirement: <span id="dailyMilkReq"></span> kg</p>
+    </div>
+
+    <div class="calendar">
+        <h3>Calendar</h3>
+        <div id="calendarHeader">
+            <button id="prevMonthBtn">←</button>
+            <span id="currentMonth">March 2025</span>
+            <button id="nextMonthBtn">→</button>
+        </div>
+        <div id="calendarGrid"></div>
+    </div>
+
+    <div class="update-milk-details">
+        <label for="milkPerKg">Milk per kg for <span id="selectedDate">[Current Date]</span>:</label>
+        <input type="number" id="milkPerKg" value="0" step="0.5">
+        <button id="updateBtn">Update</button>
+        <button id="resetBtn">Reset</button>
+    </div>
+
+    <script>
+        // Sign-up form handling
+        document.getElementById('signupForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const name = document.getElementById('name').value;
+            const address = document.getElementById('address').value;
+            const milkPrice = document.getElementById('milkPrice').value;
+            const minMilkReq = document.getElementById('minMilkReq').value;
+
+            // Store data in local storage (simplified for this example)
+            localStorage.setItem('userEmail', email);
+            localStorage.setItem('userName', name);
+            localStorage.setItem('userAddress', address);
+            localStorage.setItem('milkPrice', milkPrice);
+            localStorage.setItem('minMilkReq', minMilkReq);
+
+            alert("Signup successful! Now you can proceed to the home page.");
+            window.location.href = 'home.html'; // Redirect to home page
+        });
+
+        // Home page script to load user data
+        window.onload = function() {
+            const userName = localStorage.getItem('userName');
+            const milkPrice = localStorage.getItem('milkPrice');
+            const dailyMilkReq = localStorage.getItem('minMilkReq');
+            
             // Populate the home page with user data
             document.getElementById('userName').textContent = userName;
             document.getElementById('milkPriceDisplay').textContent = milkPrice;
