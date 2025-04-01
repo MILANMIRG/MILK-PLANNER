@@ -1,0 +1,101 @@
+            // Populate the home page with user data
+            document.getElementById('userName').textContent = userName;
+            document.getElementById('milkPriceDisplay').textContent = milkPrice;
+            document.getElementById('dailyMilkReq').textContent = dailyMilkReq;
+            
+            // Set selected date to current date
+            const currentDate = new Date().toISOString().split('T')[0];
+            document.getElementById('selectedDate').textContent = currentDate;
+
+            // Event listeners for buttons
+            document.getElementById('updateBtn').addEventListener('click', updateMilkDetails);
+            document.getElementById('resetBtn').addEventListener('click', resetMilkDetails);
+            
+            // Toggle button functionality for auto-adding milk
+            document.getElementById('autoAddMilkBtn').addEventListener('click', function() {
+                const toggleBtn = document.getElementById('autoAddMilkBtn');
+                if (toggleBtn.textContent === "RESUME") {
+                    toggleBtn.textContent = "PAUSE";
+                } else {
+                    toggleBtn.textContent = "RESUME";
+                }
+            });
+
+            // Initialize calendar
+            renderCalendar();
+
+            // Event listeners for navigating months
+            document.getElementById('prevMonthBtn').addEventListener('click', function() {
+                changeMonth(-1);
+            });
+
+            document.getElementById('nextMonthBtn').addEventListener('click', function() {
+                changeMonth(1);
+            });
+        };
+
+        // Calendar functions
+        let selectedDate = new Date();
+        let currentMonth = new Date().getMonth();
+        let currentYear = new Date().getFullYear();
+
+        function renderCalendar() {
+            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            const calendarHeader = document.getElementById('currentMonth');
+            calendarHeader.textContent = `${monthNames[currentMonth]} ${currentYear}`;
+
+            const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+            const calendarGrid = document.getElementById('calendarGrid');
+            calendarGrid.innerHTML = '';
+
+            // Add empty divs before the first day
+            for (let i = 0; i < firstDay; i++) {
+                calendarGrid.innerHTML += `<div class="calendar-day"></div>`;
+            }
+
+            // Add the days of the month
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayDiv = document.createElement('div');
+                dayDiv.classList.add('calendar-day');
+                dayDiv.textContent = day;
+
+                if (day === selectedDate.getDate() && currentMonth === selectedDate.getMonth() && currentYear === selectedDate.getFullYear()) {
+                    dayDiv.classList.add('selected-day');
+                }
+
+                dayDiv.addEventListener('click', function() {
+                    selectedDate = new Date(currentYear, currentMonth, day);
+                    renderCalendar();
+                });
+
+                calendarGrid.appendChild(dayDiv);
+            }
+        }
+
+        function changeMonth(direction) {
+            currentMonth += direction;
+            if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear--;
+            }
+            if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+            }
+            renderCalendar();
+        }
+
+        function updateMilkDetails() {
+            const milkPerKg = document.getElementById('milkPerKg').value;
+            alert(`Milk per kg updated for ${selectedDate.toDateString()}: ${milkPerKg} kg`);
+        }
+
+        function resetMilkDetails() {
+            document.getElementById('milkPerKg').value = 0;
+            alert(`Milk per kg reset for ${selectedDate.toDateString()}`);
+        }
+    </script>
+</body>
+</html>
