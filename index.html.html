@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Milk Planner</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; background-color: #f8f9fa; text-align: center; }
+    .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 20px; }
+    .day { border: 1px solid #ddd; padding: 10px; text-align: center; background-color: #ffffff; border-radius: 5px; cursor: pointer; }
+    .day.zero-milk { background-color: #ffcccb !important; }
+    .day.current-day { background-color: #4a90e2 !important; color: white; font-weight: bold; }
+    .day.selected { background-color: #ffa500 !important; color: white; font-weight: bold; }
+    .weekdays { display: grid; grid-template-columns: repeat(7, 1fr); font-weight: bold; margin-top: 10px; }
+    .total { margin-top: 20px; font-size: 18px; font-weight: bold; }
+    button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+    select, input { padding: 8px; font-size: 16px; margin: 5px; }
+    .update-buttons button { padding: 5px 10px; font-size: 16px; }
+    .day.zero-milk {
+  background-color: #ffcccb !important; /* Red highlight for 0 or less than min */}
+      .day.above-minimum {
+      background-color: #d3ffd3 !important; /* Light green highlight for more than min */
+      }
+
+      .day.current-day {
+      background-color: #4a90e2 !important;
+      color: white;
+      font-weight: bold;
+      }
+
+      .day.selected {
+      background-color: #ffa500 !important;
+      color: white;
+      font-weight: bold;
+      }
+
+  </style>
+</head>
+<body>
+  <h1>Milk Planner</h1>
+  <div class="controls">
+    <label>Milk Price per Kg: ₹<input type="number" id="milkPrice" min="1" value="50" onchange="updateMilkPrice()"></label>
+    <br>
+    <label>Daily Minimum Milk: <input type="number" id="dailyMinMilk" min="0" value="0" onchange="updateDailyMin()"></label>
+  </div>
+  <label>Month: <select id="month" onchange="renderCalendar()"></select></label>
+  <label>Year: <select id="year" onchange="renderCalendar()"></select></label>
+
+  <div class="weekdays">
+    <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+  </div>
+  <div class="calendar" id="calendar"></div>
+  <div class="total" id="totalMilk">Total Milk: 0 kg</div>
+  <div class="total" id="totalBill">Total Bill: ₹0</div>
+
+  <h2>Update Milk Data</h2>
+  <label>Select Date: <span id="selectedDateText"></span></label><br>
+  <div class="update-buttons">
+    <button onclick="adjustMilk(-0.5)" style="background-color: red; color: white;">-</button>
+    <input type="number" id="updateMilk" min="0" step="0.5">
+    <button onclick="adjustMilk(0.5)" style="background-color: green; color: white;">+</button>
+  </div>
+  <button onclick="updateMilkEntry()">Update</button>
+  <button onclick="resetMilkEntry()">Reset</button>
+  <button onclick="generateBill()">Generate Bill</button>
+
+  <script>
+    let milkData = {};
+    let today = new Date();
+    let selectedDay = null;
+
+    function getStorageKey() {
+      return `milkPlannerData-${document.getElementById("year").value}-${document.getElementById("month").value}`;
+    }
+
+    function loadMilkData() {
+      milkData = JSON.parse(localStorage.getItem(getStorageKey())) || {};
+    }
+
+    function saveMilkData() {
+      localStorage.setItem(getStorageKey(), JSON.stringify(milkData));
+    }
+
+    function updateMilkPrice() {
+      const price = parseFloat(document.getElementById("milkPrice").value) || 0;
+      localStorage.setItem("milkPrice", price);
+      updateTotals();
+    }
+
+    function updateTotals() {
+      let totalMilk = Object.values(milkData).reduce((sum, kg) => sum + kg, 0);
+      const price = parseFloat(document.getElementById("milkPrice").value) || 0;
+      document.getElementById("totalMilk").innerText = `Total Milk: ${totalMilk} kg`;
+      document.getElementById("totalBill").innerText = `Total Bill: ₹${(totalMilk * price).toFixed(2)}`;
+      saveMilkData();
+    }
+
+    function updateDailyMin() {
+      const val = parseFloat(document.getElementById("dailyMinMilk").value) || 0;
+      localStorage.setItem("dailyMinMilk", val);
+
+      const month = parseInt(document.getElementById("month").value);
+      const year = parseInt(document.getElementById("year").value);
+      const currentDate = new Date();
+
+      for (let i = 1; i <= new Date(year, month + 1, 0).getDate(); i++) {
+        const dateObj = new Date(year, month, i);
+        const dateKey = `${year}-${month + 1}-${i}`;
+        if (dateObj <= currentDate) {
+          milkData[dateKey] = val;
+        }
+      }
+
+      saveMilkData();
+      renderCalendar();
+    }
+
+    function renderCalendar() {
+  loadMilkData();
+  const month = parseInt(document.getElementById("month").value);
+  const year = parseInt(document.getElementById("year").value);
+  const dailyMin = parseFloat(localStorage.getItem("dailyMinMilk")) || 0;
+  const milkPrice = parseFloat(localStorage.getItem("milkPrice")) || 50;
+  document.getElementById("dailyMinMilk").value = dailyMin;
+  document.getElementById("milkPrice").value = milkPrice;
+
+  const calendar = document.getElementById("calendar");
+  calendar.innerHTML = "";
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDay = new Date(year, month, 1).getDay();
+  const currentDate = new Date();
+
+  for (let i = 0; i < firstDay; i++) {
+    calendar.innerHTML += `<div class="day" style="visibility: hidden;"></div>`;
+  }
+
+  for (let i = 1; i <= daysInMonth; i++) {
+    const dateKey = `${year}-${month + 1}-${i}`;
+    let thisDate = new Date(year, month, i);
+
+    if (!(dateKey in milkData)) {
+      milkData[dateKey] = dailyMin;
+    }
+
+    let classList = "day";
+    const milkQty = milkData[dateKey];
+
+    // Check milk quantity and apply corresponding styles
+    if (milkQty === 0 || milkQty < dailyMin) {
+      classList += " zero-milk"; // red highlight
+    } else if (milkQty > dailyMin) {
+      classList += " above-minimum"; // light green highlight
+    }
+
+    if (i === currentDate.getDate() && month === currentDate.getMonth() && year === currentDate.getFullYear()) {
+      classList += " current-day";
+    }
+    if (i === selectedDay) {
+      classList += " selected";
+    }
+
+    calendar.innerHTML += `<div class="${classList}" data-key="${dateKey}" onclick="selectDay(${i})">${i} <br> ${milkQty || 0} kg</div>`;
+  }
+
+  updateTotals();
+}
+
+
+    function selectDay(day) {
+      if (selectedDay !== null) {
+        const prevKey = `${document.getElementById("year").value}-${parseInt(document.getElementById("month").value) + 1}-${selectedDay}`;
+        const prevEl = document.querySelector(`.day[data-key='${prevKey}']`);
+        if (prevEl) prevEl.classList.remove('selected');
+      }
+      selectedDay = day;
+      document.getElementById("selectedDateText").innerText = day;
+      const dateKey = `${document.getElementById("year").value}-${parseInt(document.getElementById("month").value) + 1}-${day}`;
+      document.getElementById("updateMilk").value = milkData[dateKey] || document.getElementById("dailyMinMilk").value;
+      const selectedEl = document.querySelector(`.day[data-key='${dateKey}']`);
+      if (selectedEl) selectedEl.classList.add('selected');
+    }
+
+    function adjustMilk(amount) {
+      let input = document.getElementById("updateMilk");
+      input.value = Math.max(0, (parseFloat(input.value) || 0) + amount);
+    }
+
+    function updateMilkEntry() {
+      if (selectedDay === null) return;
+      const dateKey = `${document.getElementById("year").value}-${parseInt(document.getElementById("month").value) + 1}-${selectedDay}`;
+      milkData[dateKey] = parseFloat(document.getElementById("updateMilk").value) || 0;
+      saveMilkData();
+      renderCalendar();
+      const selectedEl = document.querySelector(`.day.selected`);
+      if (selectedEl) selectedEl.classList.remove('selected');
+      selectedDay = null;
+    }
+
+    function resetMilkEntry() {
+      if (selectedDay === null) return;
+      const dateKey = `${document.getElementById("year").value}-${parseInt(document.getElementById("month").value) + 1}-${selectedDay}`;
+      milkData[dateKey] = 0;
+      saveMilkData();
+      renderCalendar();
+      const selectedEl = document.querySelector(`.day.selected`);
+      if (selectedEl) selectedEl.classList.remove('selected');
+      selectedDay = null;
+      document.getElementById("selectedDateText").innerText = "";
+      document.getElementById("updateMilk").value = "";
+    }
+
+    function generateBill() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      const milkPrice = parseFloat(document.getElementById("milkPrice").value);
+      const dailyMin = parseFloat(document.getElementById("dailyMinMilk").value);
+      const month = parseInt(document.getElementById("month").value);
+      const year = parseInt(document.getElementById("year").value);
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+      doc.setFontSize(18);
+      doc.text("MILK CONSUMPTION BILL", 10, 10);
+      doc.setFontSize(12);
+      doc.text(`Month and Year: ${month + 1}/${year}`, 10, 20);
+      doc.text(`Milk Price: Rs ${milkPrice.toFixed(2)} per litre`, 10, 26);
+
+      let y = 36;
+      doc.setFontSize(10);
+      doc.text("Date", 10, y);
+      doc.text("Milk Consumption (L)", 60, y);
+      doc.text("Amount (Rs)", 110, y);
+      y += 6;
+      doc.line(10, y, 200, y);
+      y += 6;
+
+      let totalMilk = 0;
+      let totalAmount = 0;
+
+      for (let i = 1; i <= daysInMonth; i++) {
+        const dateKey = `${year}-${month + 1}-${i}`;
+        const milkQty = milkData[dateKey] || 0;
+        const subtotal = milkQty * milkPrice;
+
+        if (milkQty < dailyMin) {
+          doc.setTextColor(255, 0, 0);
+        } else if (milkQty > dailyMin) {
+          doc.setTextColor(0, 128, 0);
+        } else {
+          doc.setTextColor(0, 0, 0);
+        }
+
+        doc.text(`${i}/${month + 1}`, 10, y);
+        doc.text(`${milkQty.toFixed(2)} L`, 60, y);
+        doc.text(`Rs ${subtotal.toFixed(2)}`, 110, y);
+
+        y += 6;
+        totalMilk += milkQty;
+        totalAmount += subtotal;
+
+        if (y > 270) {
+          doc.addPage();
+          y = 10;
+        }
+      }
+
+      doc.setTextColor(0, 0, 0);
+      y += 6;
+      doc.line(10, y, 200, y);
+      y += 6;
+      doc.text(`Grand Total: ${totalMilk.toFixed(2)} L`, 10, y);
+      y += 6;
+      doc.text(`Total Bill: Rs ${totalAmount.toFixed(2)}`, 10, y);
+
+      doc.save(`Milk_Bill_${year}_${month + 1}.pdf`);
+    }
+
+    function init() {
+      for (let i = 0; i < 12; i++) {
+        let option = document.createElement("option");
+        option.value = i;
+        option.innerText = new Date(0, i).toLocaleString("default", { month: "long" });
+        document.getElementById("month").appendChild(option);
+      }
+
+      const currentYear = today.getFullYear();
+      for (let i = currentYear - 5; i <= currentYear + 5; i++) {
+        let option = document.createElement("option");
+        option.value = i;
+        option.innerText = i;
+        document.getElementById("year").appendChild(option);
+      }
+
+      document.getElementById("month").value = today.getMonth();
+      document.getElementById("year").value = currentYear;
+      renderCalendar();
+    }
+
+    init();
+  </script>
+</body>
+</html>
