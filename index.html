@@ -55,7 +55,7 @@
   <div class="total" id="totalBill">Total Bill: ₹0</div>
 
   <h2>Update Milk Data</h2>
-  <label>Select Date: <span id="selectedDateText"></span></label><br>
+  <label>Selected Date: <span id="selectedDateText"></span></label><br>
   <div class="update-buttons">
     <button onclick="adjustMilk(-0.5)" style="background-color: red; color: white;">-</button>
     <input type="number" id="updateMilk" min="0" step="0.5">
@@ -64,7 +64,11 @@
   <button onclick="updateMilkEntry()">Update</button>
   <button onclick="resetMilkEntry()">Reset</button>
   <button onclick="generateBill()">Generate Bill</button>
-
+  <br>
+  <footer class="footer">
+    &copy; MILAN . All rights are reserved.
+  </footer>
+  
   <script>
     let milkData = {};
     let today = new Date();
